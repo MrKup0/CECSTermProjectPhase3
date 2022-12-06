@@ -1,3 +1,4 @@
+import MenuMethods
 def menu(): # Pres order
   print("[1] Create a new Key") # Jacob
   print("[2] Request Access") # Angel
@@ -10,18 +11,19 @@ def menu(): # Pres order
   print("[9] Log room access") # Jacob
   print("[0] Quit")
 
-def io_Menu():
+def io_Menu(db):
   menu()
   option = int(input("Enter your choice "))
 
   # Create new key
   if option == 1:
-    
+    MenuMethods.create_key(db)
   # Create request
   elif option == 2:
 
   # Get employee room access
   elif option == 3:
+    MenuMethods.list_employee_room_access(db)
 
   # Delete a key
   elif option == 4:
