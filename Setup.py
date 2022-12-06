@@ -3,15 +3,88 @@ from pymongo import MongoClient
 from Utilities import Utilities
 
 
-##employees_validator
-##requests_validator
-##buildings_validator
-##rooms_validator
+employees_validator = {
+    'validator': {
+        '$jsonSchema': {
+            'bsonType': 'object',
+            'required': ["first_name", "last_name"],
+            'additionalProperties': False,
+            'properties': {
+                '_id': {},
+                'first_name': {
+                    'bsonType': "string"
+                },
+                'last_name': {
+                    'bsonType': "string"
+                },
+                'balance': {
+                    'bsonType': "int"
+                }
+            }
+        }
+    }
+}
+requests_validator = {
+    'validator': {
+        '$jsonSchema': {
+            'bsonType': 'object',
+            'required': ["room_number", "employee_id"],
+            'additionalProperties': False,
+            'properties': {
+                '_id': {},
+                'employee_id': {
+                    'bsonType': 'object'
+                },
+                'room_number': {},
+                'building_name': {},
+                'date_requested': {
+                    'bsonType': 'date'
+                }
+            }
+        }
+    }
+}
+buildings_validator = {
+    'validator': {
+        '$jsonSchema': {
+            'bsonType': 'object',
+            'required': ["building_name"],
+            'additionalProperties': False,
+            'properties': {
+                '_id': {},
+                'building_name': {}
+            }
+        }
+    }
+}
+rooms_validator = {
+    'validator': {
+        '$jsonSchema': {
+            'bsonType': 'object',
+            'required': ["room_number", "building_name"],
+            'additionalProperties': False,
+            'properties': {
+                '_id': {},
+                'room_number': {},
+                'building_name': {}
+            }
+        }
+    }
+}
 doors_validator = {
     'validator': {
         '$jsonSchema': {
             'bsonType': 'object',
-            'required': ['door_name', 'room_number', 'building_name']
+            'required': ["door_name", "room_number", "building_name"],
+            'additionalProperties': False,
+            'properties': {
+                '_id': {},
+                'door_name': {
+
+                },
+                'room_number': {},
+                'building_name': {}
+            }
         }
     }
 }
