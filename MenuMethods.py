@@ -1,4 +1,8 @@
 import random
+
+from bson import DBRef
+
+
 def create_key(db):
     # Check if non-empty
     if db.hooks.find().count() > 0:
@@ -11,6 +15,7 @@ def create_key(db):
         print(i["hook_id"])
 
     selection = int(input("Enter hook to select: "))
+    new_hook = hooks
 
     # Is it valid? TODO
 
@@ -18,7 +23,25 @@ def create_key(db):
     # Generate new key number
     new_key_number = random.randint(1, 999999)
     # Door for key to open
+    # Check there are doors
+    if not (db.doors.find().count() > 0):
+        print("No doors exist, please construct some")
+        return
+    # now make the door
+    doors = db.doors.find()
+    new_door = doors[random.randint(0, doors.count() - 1)]
+    final_new_key = {
+        "door_name": DBRef("doors", new_door["door_name"]),
+        "room_number": DBRef("doors", new_door["room_number"]),
+        "building_name": DBRef("doors", new_door["building_number"]),
+        "hook_id": selection,
+        "key_id": new_key_number
+    }
 
+    # does this match the validator?
+    try:
+        keys = db.keys
+        keys.insert_one(final_new_key)
 
 def list_employee_room_access(db):
     employees = db.employees
