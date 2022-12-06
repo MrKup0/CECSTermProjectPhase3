@@ -1,39 +1,50 @@
 import getpass
+from datetime import datetime
+from pprint import pprint
+
 import pymongo
+from bson import DBRef
 from pymongo import MongoClient
-from sqlalchemy import Column, String, Integer, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import relationship
-from orm_base import Base
+from pprint import pprint
+from Utilities import Utilities
 
-from Issued_Keys import IssuedKey
+Keys_validator = {
+    'validator': {
+        '$jsonSchema': {
+            # Signifies that this schema is complex, has parameters within it.
+            # These can be nested.
+            'bsonType': "object",
+            'description': "Creates a key needed to enter a specific room",
+            'required': ["hook_id", "room_number", "door_name"],
+            'additionalProperties': False,
+            'properties': {
+                # I would LIKE to demand an ObjectID here, but I cannot figure out how
+                'hook_id': {},
+                'name': {
+                    'bsonType': "Integer",
+                    "description": "Id of the key that will be called upon when asked."
+                },
+                'room_number': {
+                    # the type "number" matches integer, decimal, double, and long
+                    'bsonType': "Integer",
+                    "description": "the room number that the key will be matched too",
+                },
+                'door_name': {
+                    'bsonType': "String",
+                    "description": "Name of the class that is inside the room"
+                                   'bsonType': "string"
+                }
+                'active': {
+                    'bsonType': "bool",
+                    "description": "Do we still offer this pizza?"
+                },
+                'description': {
+                    'bsonType': "string",
+                    "description": "Mouth-watering text to show customer what to buy"
+                }
+db.command('collMod', 'pizza_M2M', **Keys_validator)
 
 
-class Key(Base):
-    __tablename__ = 'keys'
-    # Instance Variables
-    hook_id = Column(Integer, ForeignKey('hooks.hook_id'), nullable=False, primary_key=True)
-    room_number = Column(Integer, ForeignKey('doors.room_number'), nullable=False, primary_key=True)
-    door_name = Column(String, ForeignKey('doors.door_name'), nullable=False, primary_key=True)
-
-    # Composite Key
-    __table_args__ = (UniqueConstraint('hook_id', 'room_number', 'door_name'),)
-
-    # Relationships
-    door = relationship("Door", primaryjoin="and_(Key.room_number == foreign(Door.room_number), "
-                        "Key.door_name == foreign(Door.door_name))", back_populates='keys_list')
-    hook = relationship("Hook", back_populates='keys_list', viewonly=False)
-    issued_key: [IssuedKey] = relationship("IssuedKey", back_populates="key", viewonly=False)
-    # Class methods
-    def __init__(self, door, hook):
-        self.door = door
-        self.hook = hook
-        self.issued_key = []
-
-        self.hook_id = self.hook.hook_id
-        self.room_number = self.door.room_number
-        self.door_name = self.door.door_name
-
-    #def add_key(self, opening_door: Door, hook: Hook):
 
 
-    #def issue_key(self, request: Request):
+
