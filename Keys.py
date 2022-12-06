@@ -33,7 +33,7 @@ Keys_validator = {
                     'bsonType': "String",
                     "description": "Name of the class that is inside the room"
                                    'bsonType': "string"
-                }
+                },
                 'active': {
                     'bsonType': "bool",
                     "description": "Do we still offer this pizza?"
