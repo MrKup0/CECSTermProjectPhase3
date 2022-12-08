@@ -11,37 +11,30 @@ def create_key(db):
 
     hooks = db.hooks
     print("valid hooks to choose from:")
-    for i in hooks:
-        print(i["hook_id"])
+    for i in hooks.find():
+        print(i["_id"])
 
     selection = int(input("Enter hook to select: "))
-    new_hook = hooks
 
-    # Is it valid? TODO
-
-    # Create key
-    # Generate new key number
-    new_key_number = random.randint(1, 999999)
-    # Door for key to open
-    # Check there are doors
-    if not (db.doors.find().count() > 0):
-        print("No doors exist, please construct some")
-        return
-    # now make the door
-    doors = db.doors.find()
-    new_door = doors[random.randint(0, doors.count() - 1)]
-    final_new_key = {
-        "door_name": DBRef("doors", new_door["door_name"]),
-        "room_number": DBRef("doors", new_door["room_number"]),
-        "building_name": DBRef("doors", new_door["building_number"]),
-        "hook_id": selection,
-        "key_id": new_key_number
-    }
-
-    # does this match the validator?
     try:
-        keys = db.keys
-        keys.insert_one(final_new_key)
+        # Get the hook
+        new_hook = list(db.hooks.find_one({'_id': selection}))
+        # Create key
+        # Door for key to open
+        # Check there are doors
+        if not (db.doors.find().count() > 0):
+            print("No doors exist, please construct some")
+            return
+        # now make the door
+        doors_list = list(db.doors.find())
+
+        try:
+            keys = db.keys
+            keys.insert_one({'_id': random.randint(3, 999),
+                             'hook_id': DBRef('hooks', new_hook[0]['_id']),
+                             'door_id': DBRef('doors', doors_list[random.randint(0, len(doors_list) - 1)]['_id'])})
+        except Exeption as ex:
+            return
 
 def list_employee_room_access(db):
     employees = db.employees
@@ -49,12 +42,12 @@ def list_employee_room_access(db):
     for i in employees:
         print(i["_id"]+": " + i["first_name"] + " " + i["last_name"])
     emp = input("Enter the ID of the employee who's access you want to check")
-    matching_requests = db.requests.find({ "employees_id": emp })
+    matching_requests = db.requests.find({"employee_id": emp })
 
     # Find issued keys based on matching requests
     tmp = []
     for i in matching_requests:
-        tmp.append(i["_ID"])
+        tmp.append(i["_id"])
     if not (len(tmp) > 0):
         print("No keys have been issued for this employee")
         return
@@ -67,7 +60,7 @@ def list_employee_room_access(db):
     if not (len(keys) > 0):
         print("Uh oh")
         return
-    matching_keys = db.keys.find({"_ID": {"$in": keys}})
+    matching_keys = db.keys.find({"_id": {"$in": keys}})
 
     # Get the hooks associated with those keys
     hooks = []
@@ -75,46 +68,26 @@ def list_employee_room_access(db):
         hooks.append(i["hook_id"])
     matching_doors = db.keys.find({"hook_id": {"$in": hooks}})
 
+    # Get the door and the room
+    cooler_doors = []
+    for i in matching_doors:
+        cooler_doors.append(i["door_id"])
+    valid_doors = db.doors.find({'_id': {'$in': cooler_doors}})
+    cooler_rooms = []
+    for i in valid_doors:
+        cooler_rooms.append(i['room_number'])
+
+    access_rooms = db.rooms.find({'_id': {'$in': cooler_rooms}})
+
     # Return the unique rooms associated with the keys
     print("Employee can open:")
     bar = [] # my poor memory
-    for i in matching_doors:
-        room = i["room_number"]
-        building = i["building_name"]
+    for i in access_rooms:
+        room = i['_id']
+        building = i['building_name']
         pirate = (room, building)
         if pirate not in bar:
             print(room + " in " + building)
-            bar.append(pirate)
 
-def list_employee_room_ac(db):
-    employees = db.employees
-
-    print("Possible Employees: ")
-    for i in employees.find():
-        print(i['_id'] + ") " + i['first_name'] + " " + i['last_name'])
-
-    sel_id = int(input("Enter ID for employee: "))
-
-    # Check the employee has a request to terminate early
-    found_req = list(db.requests.find({'_id': sel_id}))
-
-    if len(found_req) == 0 or found_req is None:
-        print("Employee cannot enter any rooms")
-        return
-
-    try:
-        # Check if the request has a child key
-        tmp = []
-        for i in found_req:
-            tmp.append(i['_id'])
-        found_is_k = list(db.issued_keys.find({'request_id': {'$in': tmp},
-                                          'date_returned': None, 'date_lost': None}))
-        # Find the correlating key
-        tmp2 = []
-        for i in found_is_k:
-            tmp2.append(i['key_id'])
-        found_k = list(db.keys.find({'_id': {'$in': tmp2}}))
-
-    except Exception as ex:
 
 
