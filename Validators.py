@@ -1,7 +1,3 @@
-from pymongo import MongoClient
-
-from Utilities import Utilities
-
 employees_validator = {
     'validator': {
         '$jsonSchema': {
@@ -51,9 +47,7 @@ buildings_validator = {
             'additionalProperties': False,
             'properties': {
                 '_id': {},
-                'building_name': {
-                    'bsonType': "string"
-                }
+                'building_name': {}
             }
         }
     }

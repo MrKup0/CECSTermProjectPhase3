@@ -96,11 +96,25 @@ def list_employee_room_ac(db):
     sel_id = int(input("Enter ID for employee: "))
 
     # Check the employee has a request to terminate early
-    found_req = db.requests.find({'_id': sel_id})
+    found_req = list(db.requests.find({'_id': sel_id}))
 
-    if len(list(found_req)) == 0 or found_req is None:
+    if len(found_req) == 0 or found_req is None:
         print("Employee cannot enter any rooms")
         return
 
-    # Check if the request has a child key
-    found_is_k = db.issued_keys.find({''})
+    try:
+        # Check if the request has a child key
+        tmp = []
+        for i in found_req:
+            tmp.append(i['_id'])
+        found_is_k = list(db.issued_keys.find({'request_id': {'$in': tmp},
+                                          'date_returned': None, 'date_lost': None}))
+        # Find the correlating key
+        tmp2 = []
+        for i in found_is_k:
+            tmp2.append(i['key_id'])
+        found_k = list(db.keys.find({'_id': {'$in': tmp2}}))
+
+    except Exception as ex:
+
+
