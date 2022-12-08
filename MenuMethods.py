@@ -87,7 +87,39 @@ def list_employee_room_access(db):
         building = i['building_name']
         pirate = (room, building)
         if pirate not in bar:
-            print(room + " in " + building)
+          print(room + " in " + building)
 
+def delete_key(db):
+    #Check to see if there is a key that is created
+    key = int(input("enter the key_id of the key: "))
+    rmp = []
+    for i in key:
+        rmp.append(i["_id"])
+    if not (len(rmp) > 0):
+        print("No keys have been issued for this employee")
+        return
+    matching_issued_keys = db.issued_keys.find({"request_id": {"$in": rmp}})
+  #Once all issued keys have been found delete them if they exsist
+      if (key in matching_issued_keys):
+        del key
+    else:
+        print("Key does not exsist please try again. ")
 
+def lost_key_logged(db):
+    # Find issued keys based on matching requests
+    lost_key = int(input("Enter the key_id for the lost key: "))
+    tmp = []
+    for i in lost_key:
+        tmp.append(i["_id"])
+    if not (len(tmp) > 0):
+        print("No keys have been issued for this employee")
+        return
+    matching_issued_keys = db.issued_keys.find({"request_id": {"$in": tmp}})
+  #Once all keys have been found check if the key logged exsist
+    if lost_key in matching_issued_keys:
+        print("Key has been recorded")
+        return lost_key
 
+    else:
+        print("Key does not exsist.")
+        return
