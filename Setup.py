@@ -51,7 +51,9 @@ buildings_validator = {
             'additionalProperties': False,
             'properties': {
                 '_id': {},
-                'building_name': {}
+                'building_name': {
+                    'bsonType': "string"
+                }
             }
         }
     }
@@ -167,16 +169,3 @@ issued_keys_validator = {
     }
 }
 
-cluster = "mongodb+srv://kupo:001657916579@termproject.7grkfgp.mongodb.net/?retryWrites=true&w=majority"
-client = MongoClient(cluster)
-db = client.Term_Project
-
-db.command('collMod', 'employees', **employees_validator)
-db.command('collMod', 'requests', **requests_validator)
-db.command('collMod', 'rooms', **rooms_validator)
-db.command('collMod', 'buildings', **buildings_validator)
-db.command('collMod', 'doors', **doors_validator)
-db.command('collMod', 'hooks', **hooks_validator)
-db.command('collMod', 'keys', **keys_validator)
-db.command('collMod', 'issued_keys', **issued_keys_validator)
-#db.command('collMod', 'hooks', **hooks_validator)

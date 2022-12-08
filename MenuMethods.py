@@ -85,3 +85,22 @@ def list_employee_room_access(db):
         if pirate not in bar:
             print(room + " in " + building)
             bar.append(pirate)
+
+def list_employee_room_ac(db):
+    employees = db.employees
+
+    print("Possible Employees: ")
+    for i in employees.find():
+        print(i['_id'] + ") " + i['first_name'] + " " + i['last_name'])
+
+    sel_id = int(input("Enter ID for employee: "))
+
+    # Check the employee has a request to terminate early
+    found_req = db.requests.find({'_id': sel_id})
+
+    if len(list(found_req)) == 0 or found_req is None:
+        print("Employee cannot enter any rooms")
+        return
+
+    # Check if the request has a child key
+    found_is_k = db.issued_keys.find({''})
