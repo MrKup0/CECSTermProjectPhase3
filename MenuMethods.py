@@ -96,15 +96,18 @@ def delete_key(db):
         print("key_id: "+ i['_id'])
     key = int(input("enter the key_id of the key you wish to remove: "))
     matching_issued_keys = list(db.issued_keys.find({"key_id": key}))
-    request_ids = []
-    for i in matching_issued_keys:
-        request_ids.append(i['request_id'])
-    # Remove requests associated with those keys
-    db.requests.delete_many({'_id' : {'$in': request_ids}})
-    # Remove issued keys
-    db.issued_keys.delete_many({'key_id': key})
-    # Remove the key
-    db.keys.delete_one({'_id': key})
+    try:
+      request_ids = []
+      for i in matching_issued_keys:
+          request_ids.append(i['request_id'])
+      # Remove requests associated with those keys
+      db.requests.delete_many({'_id' : {'$in': request_ids}})
+      # Remove issued keys
+      db.issued_keys.delete_many({'key_id': key})
+      # Remove the key
+      db.keys.delete_one({'_id': key})
+    except Exception return as ex:
+      return
 
 def lost_key_logged(db):
     # Find issued keys based on matching requests
@@ -132,20 +135,28 @@ def lost_key_logged(db):
 
 def delete_employee(db):
   #Check to see if employee is there
+  employees = db.employees
+    print("Employees:")
+  try:
+    for i in employees:
+        print(i["_id"]+": " + i["first_name"] + " " + i["last_name"])
+    emp = input("Enter the ID of the employee who's access you want to check")
+    matching_requests = db.employees.find({"employee_id": emp })
+    
   employee_id = int(input("Enter the employee_id: "))
-  rmp = []
-    for i in employee_id:
-        rmp.append(i["_id"])
-    if not (len(rmp) > 0):
-        print("No id identification have been issued for this employee(s)")
-        return
-    matching_requests = db.requests.find({"employee_id": rmp })
+  
+    matching_requests = db.requests.find({"employee_id": emp })
   #Once the employee(s) with the matching ids have been found delte them
-  if employee_id in matching_requests:
-    del employee_id
-  else:
-    print("No employee with said id exsists.")
-    return
+  try:
+      request_ids = []
+      for i in matching_requests:
+          request_ids.append(i['request_id'])
+      # Remove requests associated with those employee
+      db.requests.delete_many({'_id' : {'$in': request_ids}})
+      # Remove the employee
+      db.employees.delete_one({'_id': employee})
+    except Exception return as ex:
+      return
 
 def add_door(db):
   # Check if non-empty
