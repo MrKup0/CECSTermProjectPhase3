@@ -17,25 +17,23 @@ def create_key(db):
 
     selection = int(input("Enter hook to select: "))
 
-    try:
-        # Get the hook
-        new_hook = list(db.hooks.find_one({'_id': selection}))
-        # Create key
-        # Door for key to open
-        # Check there are doors
-        if not (db.doors.find().count() > 0):
-            print("No doors exist, please construct some")
-            return
-        # now make the door
-        doors_list = list(db.doors.find())
 
-        try:
-            keys = db.keys
-            keys.insert_one({'_id': random.randint(3, 999),
-                             'hook_id': DBRef('hooks', new_hook[0]['_id']),
-                             'door_id': DBRef('doors', doors_list[random.randint(0, len(doors_list) - 1)]['_id'])})
-        except Exeption as ex:
-            return
+    # Get the hook
+    new_hook = db.hooks.find_one({'_id': selection})
+
+    if db.doors.find().count() == 0:
+        print("No doors exist to link that hook to, please construct some")
+        return
+    # now make the door
+    doors_list = list(db.doors.find())
+
+    try:
+        db.keys.insert_one({'_id': random.randint(3, 999),
+                         'hook_id': DBRef('hooks', new_hook['_id']),
+                         'door_id': DBRef('doors', doors_list[random.randint(0, len(doors_list) - 1)]['_id'])})
+    except Exeption as ex:
+        print('Could not create key. please check everything is entered correctly')
+        return
 def list_employee_room_access(db):
     employees = db.employees
     print("Employees:")
@@ -106,7 +104,7 @@ def delete_key(db):
       db.issued_keys.delete_many({'key_id': key})
       # Remove the key
       db.keys.delete_one({'_id': key})
-    except Exception return as ex:
+    except Exception as ex:
       return
 
 def lost_key_logged(db):
@@ -163,21 +161,11 @@ def delete_employee(db):
       return
 
 def add_door(db):
-  # Check if non-empty
-    if db.hooks.find().count() > 0:
-        print("There are no hooks, whoops!")
-        return
-    hooks = db.hooks
-    print("valid hooks to choose from:")
-    for i in hooks.find():
-        print(i["_id"])
-
-    selection = int(input("Enter hook to select: "))
-  building_name = (input("Enter the name of the building: "))
-  room_num = int(input("Enter the room number of said building"))
-  key_id = int(input("Enter the key_id for the new door: "))
-  new_door = (selection, building_name, room_num, key_id, new_door)
-   # now make the door
+    building_name = (input("Enter the name of the building: "))
+    room_num = int(input("Enter the room number of said building"))
+    key_id = int(input("Enter the key_id for the new door: "))
+    new_door = (selection, building_name, room_num, key_id, new_door)
+    # now make the door
         doors_list = list(db.doors.find())
 
         try:
@@ -187,7 +175,7 @@ def add_door(db):
                              'door_id': DBRef('doors', doors_list[random.randint(0, len(doors_list) - 1)]['_id'])})
         except Exeption as ex:
             return
-  doors_list.append(new_door)
+    doors_list.append(new_door)
 
 
 def update_request(db):
@@ -197,13 +185,16 @@ def update_request(db):
     # Prompt old employee
     old_id = int(input('Enter the id of the employee whos request you want to change'))
     # Locate old requests
-    old_requests = requests.find({'employee_id': old_id})
-    # Get rooms
-    request_rooms = []
-    for i in old_requests:
-        request_rooms.append(i['room_number'])
-    requested_rooms = rooms.find({'_id': {'$in': request_rooms}})
-
+    try:
+        old_requests = requests.find({'employee_id': old_id})
+        # Get rooms
+        request_rooms = []
+        for i in old_requests:
+            request_rooms.append(i['room_number'])
+        requested_rooms = rooms.find({'_id': {'$in': request_rooms}})
+    except Exception as ex:
+        print("Could not locate employee")
+        return
     # List room requests
     print('Rooms you can modify are:')
     for i in requested_rooms:
@@ -228,36 +219,64 @@ def create_request(db):
     rooms = db.rooms
 
     # Collect employee id
-    emp_id = int(input("Enter your employee id: "))
+    cursor = employees.find()
+    try:
+        for i in cursor:
+            print(i['first_name'] + " " + i['last_name'] + ", id: " + i['_id'])
+        emp_id = int(input("Enter your employee id: "))
+    except Exception as ex:
+        print('Please hire some staff')
+        return
+
+    if employees.find_one({'_id': emp_id}).count() == 0:
+        print('Invalid id')
+        return
+
     print('Which building do you need access in?\nOptions:')
-    build = buildings.find()
-    for i in build:
-        print(i['building_name'])
-    building_name = input("")
+    try:
+        build = buildings.find()
+        for i in build:
+            print(i['building_name'])
+        building_name = input("> ")
+    except Exception as ex:
+        print("No buildings exist, whoops")
+        return
 
-    building = buildings.find({'building_name': building_name})
-    tmp = []
-    for i in building:
-        tmp.append(i['_id'])
+    try:
+        building = buildings.find({'building_name': building_name})
+        tmp = []
+        for i in building:
+            tmp.append(i['_id'])
+    except Exception as ex:
+        print('Could not find that building, please try again')
+        return
 
-    print("Enter the room number you would like to create a request for\nAvailable rooms")
-    selected_rooms = buildings.find({'building_name': {'$in': tmp}})
-    for i in selected_rooms:
-        print(i['_id'])
-    selected_room_numb = input("")
+    try:
+        print("Enter the room number you would like to create a request for\nAvailable rooms")
+        selected_rooms = buildings.find({'building_name': {'$in': tmp}})
+        for i in selected_rooms:
+            print(i['_id'])
+        selected_room_numb = input("> ")
+    except Exception as ex:
+        print("That building has no rooms!")
+        return
 
-    employee_cursor = employees.find_one({'_id': emp_id})
-    room_cursor = rooms.find_one({'_id': selected_room_numb, 'building_name': tmp[0]})
+    try:
+        employee_cursor = employees.find_one({'_id': emp_id})
+        room_cursor = rooms.find_one({'_id': selected_room_numb, 'building_name': tmp[0]})
 
-    # Each for will only run once! manifesting
-    for i in employee_cursor:
-        for j in room_cursor:
-            db.requests.insert_one({
-                'employee_id': DBRef('employees', i['_id']),
-                'room_number': DBRef('rooms', j['_id']),
-                'date_requested': datetime.now()
-            })
-    print('Request has been made! Good luck')
+        # Each for will only run once! manifesting
+        for i in employee_cursor:
+            for j in room_cursor:
+                db.requests.insert_one({
+                    'employee_id': DBRef('employees', i['_id']),
+                    'room_number': DBRef('rooms', j['_id']),
+                    'date_requested': datetime.now()
+                })
+        print('Request has been made! Good luck')
+    except Exception as ex:
+        print("Something went wrong creating your request, please check everything was entered correctly")
+        return
 
 
 def list_room_access(db):
@@ -267,8 +286,9 @@ def list_room_access(db):
         return
     rooms_cursor = db.rooms.find()
     for i in rooms_cursor:
-        print("building code: " + i['building_name'] + " room: " + i['room_number'] + "room code: ")
+        print("building code: " + i['building_name'] + " room: " + i['room_number'] + " room code: ")
     room_code_selection = int(input("Enter the room code for the room you want access to: "))
+
     # Find doors associated with room
     doors_as = db.doors.find({'building_name': room_code_selection})
     if doors_as.count() == 0:
@@ -299,4 +319,14 @@ def list_room_access(db):
         ik_ids.append(i['request_id'])
 
     requests_cursor = db.requests.find({'_id': {'$in': ik_ids}})
-    emp_ids
+    emp_ids = []
+    for i in requests_cursor:
+        emp_ids.append(i['employee_id'])
+    employees_with_access = db.employees.find({'_id': {'$in': emp_ids}})
+
+    no_dupes = []
+    print("Employees with access are as follows:")
+    for i in employees_with_access:
+        if i['_id'] in no_dupes:
+            no_dupes.append(i['_id'])
+            print(i['first_name'] + " " + i['last_name'])

@@ -10,11 +10,11 @@ db = client.Term_Project
 print("Welcome!")
 active_menu = True
 while active_menu:
-    tmp = Menu.io_Menu(db)
-    if tmp is 1:
+    val = Menu.io_Menu(db)
+    if val is 1:
         active_menu = False
     # catch any weird errors
-    if tmp is 2:
+    if val is 2:
         print("Wtf, this is redundant, how did you get here?")
         active_menu = False
 print("Thank you!")
