@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 
 from bson import DBRef
 
@@ -106,23 +107,29 @@ def delete_key(db):
         print("Key does not exsist please try again. ")
 
 def lost_key_logged(db):
-    # Find issued keys based on matching requests
-    lost_key = int(input("Enter the key_id for the lost key: "))
-    tmp = []
-    for i in lost_key:
-        tmp.append(i["_id"])
-    if not (len(tmp) > 0):
-        print("No keys have been issued for this employee")
-        return
-    matching_issued_keys = db.issued_keys.find({"request_id": {"$in": tmp}})
-  #Once all keys have been found check if the key logged exsist
-    if lost_key in matching_issued_keys:
-        print("Key has been recorded")
-        return lost_key
-
-    else:
-        print("Key does not exsist.")
-        return
+    def lost_key_logged(db):
+        # Find issued keys based on matching requests
+        lost_key = int(input("Enter the key_id for the lost key: "))
+        bad_emp = int(input("Enter your employee id: "))
+        # Find employee request
+        bad_emp_requests = list(db.requests.find({'employee_id': bad_emp}))
+        if len(bad_emp_requests) == 0:
+            print("Please double check that id")
+            return
+        useable_request = []
+        for i in bad_emp_requests:
+            useable_request.append(i["_id"])
+        # Find the issued key matching the request and key
+        try:
+            matching_issued_keys = db.issued_keys.update_one(
+                {"request_id": {"$in": useable_request}, "key_id": lost_key},
+                {'date_lost': datetime.datetime.now()}
+            )
+            print("key has been marked as lost, charging employee...")
+        except Exception as ex:
+            print("Could not resolve update")
+        current_emp_bal = list(db.employees.find({'_id': bad_emp}))
+        db.employees.update_one({'_id': bad_emp}, {'balance': current_emp_bal[0]['balance'] + 20})  
 def delete_employee(db):
   #Check to see if employee is there
   employee_id = int(input("Enter the employee_id: "))
@@ -166,3 +173,73 @@ def add_door(db):
         except Exeption as ex:
             return
   doors_list.append(new_door)
+
+
+def update_request(db):
+    employees = db.employees
+    requests = db.requests
+    rooms = db.rooms
+    # Prompt old employee
+    old_id = int(input('Enter the id of the employee whos request you want to change'))
+    # Locate old requests
+    old_requests = requests.find({'employee_id': old_id})
+    # Get rooms
+    request_rooms = []
+    for i in old_requests:
+        request_rooms.append(i['room_number'])
+    requested_rooms = rooms.find({'_id': {'$in': request_rooms}})
+
+    # List room requests
+    print('Rooms you can modify are:')
+    for i in requested_rooms:
+        print(i['_id'])
+    # Get room to be updated
+    selected_room = int(input('Room number: '))
+
+    # Get new employee number
+    new_id = int(input("And the new employee id: "))
+
+    # Update
+    try:
+        selected_request = requests.update_one({'employee_id': old_id, 'room_number': selected_room},
+                                               {'$set': {'employee_id': new_id}})
+    except Exception as ex:
+        print('Error updating, check to make sure the employee id is valid')
+
+
+def create_request(db):
+    employees = db.employees
+    buildings = db.buildings
+    rooms = db.rooms
+
+    # Collect employee id
+    emp_id = int(input("Enter your employee id: "))
+    print('Which building do you need access in?\nOptions:')
+    build = buildings.find()
+    for i in build:
+        print(i['building_name'])
+    building_name = input("")
+
+    building = buildings.find({'building_name': building_name})
+    tmp = []
+    for i in building:
+        tmp.append(i['_id'])
+
+    print("Enter the room number you would like to create a request for\nAvailable rooms")
+    selected_rooms = buildings.find({'building_name': {'$in': tmp}})
+    for i in selected_rooms:
+        print(i['_id'])
+    selected_room_numb = input("")
+
+    employee_cursor = employees.find_one({'_id': emp_id})
+    room_cursor = rooms.find_one({'_id': selected_room_numb, 'building_name': tmp[0]})
+
+    # Each for will only run once! manifesting
+    for i in employee_cursor:
+        for j in room_cursor:
+            db.requests.insert_one({
+                'employee_id': DBRef('employees', i['_id']),
+                'room_number': DBRef('rooms', j['_id']),
+                'date_requested': datetime.now()
+            })
+    print('Request has been made! Good luck')
