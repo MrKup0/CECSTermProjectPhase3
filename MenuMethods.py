@@ -17,7 +17,7 @@ def create_key(db):
 
     selection = int(input("Enter hook to select: "))
 
-#db.requests.find({'employee_id': {'$ref': 'employees', '$id': emp}})
+    #db.requests.find({'employee_id': {'$ref': 'employees', '$id': emp}})
     # Get the hook
     new_hook = db.hooks.find_one({'_id': selection})
 
@@ -38,10 +38,10 @@ def list_employee_room_access(db):
     employees = db.employees
     print("Employees:")
     for i in employees:
-        print(i["_id"]+": " + i["first_name"] + " " + i["last_name"])
+        print(i["_id"], ": ", i["first_name"], " ", i["last_name"])
     emp = input("Enter the ID of the employee who's access you want to check")
     matching_requests = db.requests.find({"employee_id": {'$ref': 'employees', '$id': emp}})
-#db.requests.find({'employee_id': {'$ref': 'employees', '$id': emp}})
+    # db.requests.find({'employee_id': {'$ref': 'employees', '$id': emp}})
     # Find issued keys based on matching requests
     tmp = []
     for i in matching_requests:
@@ -49,7 +49,7 @@ def list_employee_room_access(db):
     if (len(tmp) == 0):
         print("No keys have been issued for this employee")
         return
-    matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': {'$in': tmp}})
+    matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': {'$in': tmp}}})
 
     # Use the key_id to match to parent keys
     keys = []
@@ -63,13 +63,13 @@ def list_employee_room_access(db):
     # Get the hooks associated with those keys
     hooks = []
     for i in matching_keys:
-        hooks.append(i["hook_id"])
-    matching_doors = db.keys.find({"hook_id":'$ref': 'hooks', '$id': {"$in": hooks}})
+        hooks.append(i["hook_id.$id"])
+    matching_doors = db.keys.find({"hook_id": {'$ref': 'hooks', '$id': {"$in": hooks}}})
 
     # Get the door and the room
     cooler_doors = []
     for i in matching_doors:
-        cooler_doors.append(i["door_id"])
+        cooler_doors.append(i["door_id.$id"])
     valid_doors = db.doors.find({'_id': {'$in': cooler_doors}})
     cooler_rooms = []
     for i in valid_doors:
@@ -94,19 +94,19 @@ def delete_key(db):
         print("key_id: "+ i['_id'])
     key = int(input("enter the key_id of the key you wish to remove: "))
     #matching_issued_keys = list(db.issued_keys.find({"key_id": key}))
-  matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': key})
+    matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': key}})
     try:
       request_ids = []
       for i in matching_issued_keys:
-          request_ids.append(i['request_id'])
+          request_ids.append(i['request_id.$id'])
       # Remove requests associated with those keys
       db.requests.delete_many({'_id' : {'$in': request_ids}})
       # Remove issued keys
-      db.issued_keys.delete_many({'key_id': '$ref': 'requests', '$id': key})
+      db.issued_keys.delete_many({'key_id': {'$ref': 'keys', '$id': key}})
       # Remove the key
       db.keys.delete_one({'_id': key})
     except Exception as ex:
-      return
+        return
 
 def lost_key_logged(db):
     # Find issued keys based on matching requests
@@ -124,10 +124,9 @@ def lost_key_logged(db):
         useable_request.append(i["_id"])
     # Find the issued key matching the request and key
     try:
-        matching_issued_keys = db.issued_keys.update_one(
-            {"request_id": '$ref': 'requests', '$id': {"$in": useable_request}, "key_id": lost_key},
-            {'date_lost': datetime.datetime.now()}
-        )
+        matching_issued_keys = db.issued_keys.update_one({
+            "request_id": {'$ref': 'requests', '$id': {"$in": useable_request}}, "key_id": {'$ref': 'keys', '$id': lost_key},
+            {'date_lost': datetime.datetime.now()})
         print("key has been marked as lost, charging employee...")
     except Exception as ex:
         print("Could not resolve update")
@@ -135,59 +134,69 @@ def lost_key_logged(db):
     db.employees.update_one({'_id': bad_emp}, {'balance': current_emp_bal[0]['balance'] + 20})
 
 def delete_employee(db):
-  #Check to see if employee is there
-  employees = db.employees.find()
-  print("Employees:")
-  try:
-    for i in employees:
-        print(i["_id"]+": " + i["first_name"] + " " + i["last_name"])
-  except Exeption as ex:
-      print('Could not find employees')
-      return
-  
-  try:
-      emp = input("Enter the ID of the employee who's access you want to check")
-      employee_cursor = db.employees.find({"employee_id": emp})
-      # Check for requests of the employee
-    # Find issued keys based on matching requests
-    tmp = []
-    for i in employee_cursor:
-        tmp.append(i["_id"])
-    if (len(tmp) == 0):
-        print("No keys have been issued for this employee")
-        request_ids = db.issued_keys.find({"request_id": {"$in": tmp}})
-      # IF exists, find children
-        # RM children
-      # RM Requests
-      # RM Employee
-      
-    elif emp in employee_cursor:
-      # Remove requests associated with those employee
-      db.requests.delete_many({'employee_id' : {'$in': employee_cursor}})
-      #Remove issued keys
-      db.issued_keys.delete_many({'key_id': request_ids}
-      # Remove the employee
-      db.employees.delete_one({'_id': employee})
+    #Check to see if employee is there
+    employees = db.employees.find()
+    print("Employees:")
+    try:
+        for i in employees:
+            print(i["_id"], ": ",  i["first_name"],  " ", i["last_name"])
     except Exception as ex:
-      return
+        print('could not find employees')
+    selection = int(input("Enter the id of the employee you want to delete: "))
 
+    try:
+        # Check for outgoing requests
+        req = db.requests.find({'employee_id': {'$ref': 'employees', '$id': selection}})
+        if req.count() != 0:
+            correlating_requests = []
+            for i in req:
+                correlating_requests.append(i['_id'])
+            db.issued_keys.delete_many({'request_id' : {'$ref': 'requests', '$id': {'$in':correlating_requests}}})
+            db.requests.delete_many({'employee_id': {'$ref': 'employees', '$id': selection}})
+        db.employees.delete_one({'_id': selection})
+        print('Employee has been removed')
+    except Exception as ex:
+        print('Issue locating employee and their requests, please try again')
+        return
 def add_door(db):
-    building_name = (input("Enter the name of the building: "))
-    room_num = int(input("Enter the room number of said building"))
-    key_id = int(input("Enter the key_id for the new door: "))
-    new_door = (selection, building_name, room_num, key_id, new_door)
-    # now make the door
-        doors_list = list(db.doors.find())
+    hooks = db.hooks.find()
+    if hooks.count() == 0:
+        print('No hooks were found, please try again')
+        return
+    for i in hooks:
+        print('Hook: ', i['_id'])
+    chosen_hook = int(input("Enter the hook id you wish to associate the door with: "))
 
-        try:
-            keys = db.keys
-            keys.insert_one({'_id': random.randint(3, 999),
-                             'hook_id': DBRef('hooks', new_hook[0]['_id']),
-                             'door_id': DBRef('doors', doors_list[random.randint(0, len(doors_list) - 1)]['_id'])})
-        except Exeption as ex:
-            return
-    doors_list.append(new_door)
+    hook_validation = list(db.hooks.find({'_id': chosen_hook}))
+    if len(hook_validation) == 0:
+        print('Please check you entered that correctly, we could not locate that hook')
+        return
+    rooms = db.rooms.find()
+    if rooms.count() == 0:
+        print('No avaliable options, we cannot find any buildings or rooms')
+        return
+    print()
+    for i in rooms:
+        print('Building code: ', i['building_name'], '; room number: ', i['room_number'], '; room id: ', i['id'])
+    chosen_room = int(input("> "))
 
+    room_validation = list(db.rooms.find({'id': chosen_room}))
+    if len(room_validation) == 0:
+        print('Please double check that id, we chouldnt find that room')
+        return
+
+    print("select a door to choose from")
+    door_name = input("> ")
+
+    try:
+        result = db.doors.insert_one({
+        'door_name': door_name,
+        'room_number': DBRef('rooms', room_validation[0]['_id'])
+        })
+        db.keys.insert_one({ 'hook_id': DBRef('hooks', hook_validation[0]['_id']), 'door_id': DBRef('doors', results.inserted_id)})
+        print('Door has been added and a key has been created to open it')
+    except Exception as ex:
+        print('Error adding, please ensure all params are correct')
 
 def update_request(db):
     employees = db.employees
@@ -197,11 +206,11 @@ def update_request(db):
     old_id = int(input('Enter the id of the employee whos request you want to change'))
     # Locate old requests
     try:
-        old_requests = requests.find({'employee_id': old_id})
+        old_requests = requests.find({'employee_id': {'$ref': 'employees', '$id': old_id}})
         # Get rooms
         request_rooms = []
         for i in old_requests:
-            request_rooms.append(i['room_number'])
+            request_rooms.append(i['room_number.$id'])
         requested_rooms = rooms.find({'_id': {'$in': request_rooms}})
     except Exception as ex:
         print("Could not locate employee")
@@ -218,8 +227,9 @@ def update_request(db):
 
     # Update
     try:
-        selected_request = requests.update_one({'employee_id': old_id, 'room_number': selected_room},
-                                               {'$set': {'employee_id': new_id}})
+        selected_request = requests.update_one({'employee_id': {'$ref': 'employees', '$id': old_id},
+                                                'room_number': {'$ref': 'rooms', '$id': selected_room}},
+                                               {'$set': {'employee_id': DBRef('employees', new_id)}})
     except Exception as ex:
         print('Error updating, check to make sure the employee id is valid')
 
@@ -264,7 +274,7 @@ def create_request(db):
 
     try:
         print("Enter the room number you would like to create a request for\nAvailable rooms")
-        selected_rooms = buildings.find({'building_name': {'$in': tmp}})
+        selected_rooms = rooms.find({'building_name': {'$ref': 'buildings', '$id': {'$in': tmp}}})
         for i in selected_rooms:
             print(i['_id'])
         selected_room_numb = input("> ")
@@ -274,7 +284,7 @@ def create_request(db):
 
     try:
         employee_cursor = employees.find_one({'_id': emp_id})
-        room_cursor = rooms.find_one({'_id': selected_room_numb, 'building_name': tmp[0]})
+        room_cursor = rooms.find_one({'_id': selected_room_numb, 'building_name': {'$ref': 'buildings', '$id': tmp[0]}})
 
         # Each for will only run once! manifesting
         for i in employee_cursor:
@@ -301,7 +311,7 @@ def list_room_access(db):
     room_code_selection = int(input("Enter the room code for the room you want access to: "))
 
     # Find doors associated with room
-    doors_as = db.doors.find({'building_name': room_code_selection})
+    doors_as = db.doors.find({'building_name': {'$ref': 'buildings', '$id': room_code_selection}})
     if doors_as.count() == 0:
         print("That room has no doors, please create some")
         return
@@ -309,7 +319,7 @@ def list_room_access(db):
     door_ids = []
     for i in doors_as:
         i.append(i['_id'])
-    keys_as = db.keys.find({'door_id': {'$in': door_ids}})
+    keys_as = db.keys.find({'door_id': {'$ref': doors, '$id': {'$in': door_ids}}})
 
     if keys_as.count() == 0:
         print('No keys exist for that room, no one can get in')
@@ -318,7 +328,7 @@ def list_room_access(db):
     key_ids = []
     for i in keys_as:
         key_ids.append(i['_id'])
-    ik_as = db.issued_keys.find({'key_id': {'$in': key_ids}})
+    ik_as = db.issued_keys.find({'key_id': {'$ref': 'keys', '$id': {'$in': key_ids}}})
 
     if ik_as.count() == 0:
         print("No keys have been issued, no employees can enter the room")
@@ -327,12 +337,12 @@ def list_room_access(db):
     # Find employee requests associated with issued keys
     ik_ids = []
     for i in ik_as:
-        ik_ids.append(i['request_id'])
+        ik_ids.append(i['request_id.$id'])
 
     requests_cursor = db.requests.find({'_id': {'$in': ik_ids}})
     emp_ids = []
     for i in requests_cursor:
-        emp_ids.append(i['employee_id'])
+        emp_ids.append(i['employee_id.$id'])
     employees_with_access = db.employees.find({'_id': {'$in': emp_ids}})
 
     no_dupes = []
