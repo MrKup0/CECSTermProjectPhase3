@@ -6,7 +6,7 @@ from bson import DBRef
 
 def create_key(db):
     # Check if non-empty
-    if db.hooks.find().count() > 0:
+    if db.hooks.find() > 0:
         print("There are no hooks, whoops!")
         return
 
@@ -17,7 +17,6 @@ def create_key(db):
 
     selection = int(input("Enter hook to select: "))
 
-    #db.requests.find({'employee_id': {'$ref': 'employees', '$id': emp}})
     # Get the hook
     new_hook = db.hooks.find_one({'_id': selection})
 
@@ -31,13 +30,14 @@ def create_key(db):
         db.keys.insert_one({'_id': random.randint(3, 999),
                          'hook_id': DBRef('hooks', new_hook['_id']),
                          'door_id': DBRef('doors', doors_list[random.randint(0, len(doors_list) - 1)]['_id'])})
-    except Exeption as ex:
+    except Exception as ex:
         print('Could not create key. please check everything is entered correctly')
         return
 def list_employee_room_access(db):
     employees = db.employees
     print("Employees:")
-    for i in employees:
+    emp_cursor = employees.find()
+    for i in emp_cursor:
         print(i["_id"], ": ", i["first_name"], " ", i["last_name"])
     emp = input("Enter the ID of the employee who's access you want to check")
     matching_requests = db.requests.find({"employee_id": {'$ref': 'employees', '$id': emp}})
@@ -110,11 +110,9 @@ def delete_key(db):
 
 def lost_key_logged(db):
     # Find issued keys based on matching requests
-  #matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': {'$in': tmp}})
     lost_key = int(input("Enter the key_id for the lost key: "))
     bad_emp = int(input("Enter your employee id: "))
     # Find employee request
-    #bad_emp_requests = list(db.requests.find({'employee_id': '$ref': 'requests', '$id': bad_emp}))
     bad_emp_requests = list(db.requests.find({'employee_id': {'$ref': 'employees', '$id': bad_emp}}))
     if len(bad_emp_requests) == 0:
         print("Please double check that id")
@@ -124,9 +122,7 @@ def lost_key_logged(db):
         useable_request.append(i["_id"])
     # Find the issued key matching the request and key
     try:
-        matching_issued_keys = db.issued_keys.update_one({
-            "request_id": {'$ref': 'requests', '$id': {"$in": useable_request}}, "key_id": {'$ref': 'keys', '$id': lost_key},
-            {'date_lost': datetime.datetime.now()})
+        db.issued_keys.update_one({"request_id": {'$ref': 'requests', '$id': {"$in": useable_request}}, "key_id": {'$ref': 'keys', '$id': lost_key}}, {'date_lost': datetime.datetime.now()})
         print("key has been marked as lost, charging employee...")
     except Exception as ex:
         print("Could not resolve update")
@@ -182,14 +178,14 @@ def add_door(db):
 
     room_validation = list(db.rooms.find({'id': chosen_room}))
     if len(room_validation) == 0:
-        print('Please double check that id, we chouldnt find that room')
+        print('Please double check that id, we couldnt find that room')
         return
 
     print("select a door to choose from")
     door_name = input("> ")
 
     try:
-        result = db.doors.insert_one({
+        results = db.doors.insert_one({
         'door_name': door_name,
         'room_number': DBRef('rooms', room_validation[0]['_id'])
         })
@@ -232,7 +228,6 @@ def update_request(db):
                                                {'$set': {'employee_id': DBRef('employees', new_id)}})
     except Exception as ex:
         print('Error updating, check to make sure the employee id is valid')
-
 
 def create_request(db):
     employees = db.employees
@@ -299,7 +294,6 @@ def create_request(db):
         print("Something went wrong creating your request, please check everything was entered correctly")
         return
 
-
 def list_room_access(db):
     # Prompt for rooms
     if db.rooms.find().count() == 0:
@@ -319,7 +313,7 @@ def list_room_access(db):
     door_ids = []
     for i in doors_as:
         i.append(i['_id'])
-    keys_as = db.keys.find({'door_id': {'$ref': doors, '$id': {'$in': door_ids}}})
+    keys_as = db.keys.find({'door_id': {'$ref': 'doors', '$id': {'$in': door_ids}}})
 
     if keys_as.count() == 0:
         print('No keys exist for that room, no one can get in')
