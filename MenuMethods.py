@@ -17,7 +17,7 @@ def create_key(db):
 
     selection = int(input("Enter hook to select: "))
 
-
+#db.requests.find({'employee_id': {'$ref': 'employees', '$id': emp}})
     # Get the hook
     new_hook = db.hooks.find_one({'_id': selection})
 
@@ -40,8 +40,8 @@ def list_employee_room_access(db):
     for i in employees:
         print(i["_id"]+": " + i["first_name"] + " " + i["last_name"])
     emp = input("Enter the ID of the employee who's access you want to check")
-    matching_requests = db.requests.find({"employee_id": emp })
-
+    matching_requests = db.requests.find({"employee_id": {'$ref': 'employees', '$id': emp}})
+#db.requests.find({'employee_id': {'$ref': 'employees', '$id': emp}})
     # Find issued keys based on matching requests
     tmp = []
     for i in matching_requests:
@@ -49,7 +49,7 @@ def list_employee_room_access(db):
     if (len(tmp) == 0):
         print("No keys have been issued for this employee")
         return
-    matching_issued_keys = db.issued_keys.find({"request_id": {"$in": tmp}})
+    matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': {'$in': tmp}})
 
     # Use the key_id to match to parent keys
     keys = []
@@ -64,7 +64,7 @@ def list_employee_room_access(db):
     hooks = []
     for i in matching_keys:
         hooks.append(i["hook_id"])
-    matching_doors = db.keys.find({"hook_id": {"$in": hooks}})
+    matching_doors = db.keys.find({"hook_id":'$ref': 'hooks', '$id': {"$in": hooks}})
 
     # Get the door and the room
     cooler_doors = []
@@ -93,7 +93,8 @@ def delete_key(db):
     for i in l_keys:
         print("key_id: "+ i['_id'])
     key = int(input("enter the key_id of the key you wish to remove: "))
-    matching_issued_keys = list(db.issued_keys.find({"key_id": key}))
+    #matching_issued_keys = list(db.issued_keys.find({"key_id": key}))
+  matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': key})
     try:
       request_ids = []
       for i in matching_issued_keys:
@@ -101,7 +102,7 @@ def delete_key(db):
       # Remove requests associated with those keys
       db.requests.delete_many({'_id' : {'$in': request_ids}})
       # Remove issued keys
-      db.issued_keys.delete_many({'key_id': key})
+      db.issued_keys.delete_many({'key_id': '$ref': 'requests', '$id': key})
       # Remove the key
       db.keys.delete_one({'_id': key})
     except Exception as ex:
@@ -109,10 +110,12 @@ def delete_key(db):
 
 def lost_key_logged(db):
     # Find issued keys based on matching requests
+  #matching_issued_keys = db.issued_keys.find({"request_id": {'$ref': 'requests', '$id': {'$in': tmp}})
     lost_key = int(input("Enter the key_id for the lost key: "))
     bad_emp = int(input("Enter your employee id: "))
     # Find employee request
-    bad_emp_requests = list(db.requests.find({'employee_id': bad_emp}))
+    #bad_emp_requests = list(db.requests.find({'employee_id': '$ref': 'requests', '$id': bad_emp}))
+    bad_emp_requests = list(db.requests.find({'employee_id': {'$ref': 'employees', '$id': bad_emp}}))
     if len(bad_emp_requests) == 0:
         print("Please double check that id")
         return
@@ -122,7 +125,7 @@ def lost_key_logged(db):
     # Find the issued key matching the request and key
     try:
         matching_issued_keys = db.issued_keys.update_one(
-            {"request_id": {"$in": useable_request}, "key_id": lost_key},
+            {"request_id": '$ref': 'requests', '$id': {"$in": useable_request}, "key_id": lost_key},
             {'date_lost': datetime.datetime.now()}
         )
         print("key has been marked as lost, charging employee...")
