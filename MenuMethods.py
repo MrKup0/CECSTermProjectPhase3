@@ -135,27 +135,31 @@ def lost_key_logged(db):
 
 def delete_employee(db):
   #Check to see if employee is there
-  employees = db.employees
-    print("Employees:")
+  employees = db.employees.find()
+  print("Employees:")
   try:
     for i in employees:
         print(i["_id"]+": " + i["first_name"] + " " + i["last_name"])
-    emp = input("Enter the ID of the employee who's access you want to check")
-    matching_requests = db.employees.find({"employee_id": emp })
-    
-  employee_id = int(input("Enter the employee_id: "))
-  
-    matching_requests = db.requests.find({"employee_id": emp })
+  except Exeption as ex:
+      print('Could not find employees')
+      return
   #Once the employee(s) with the matching ids have been found delte them
   try:
+      emp = input("Enter the ID of the employee who's access you want to check")
+      employee_cursor = db.employees.find({"employee_id": emp})
+      # Check for requests of the employee
       request_ids = []
+      # IF exists, find children
+        # RM children
+      # RM Requests
+      # RM Employee
       for i in matching_requests:
           request_ids.append(i['request_id'])
       # Remove requests associated with those employee
-      db.requests.delete_many({'_id' : {'$in': request_ids}})
+      db.requests.delete_many({'employee_id' : {'$in': request_ids}})
       # Remove the employee
       db.employees.delete_one({'_id': employee})
-    except Exception return as ex:
+    except Exception as ex:
       return
 
 def add_door(db):
@@ -255,13 +259,44 @@ def create_request(db):
             })
     print('Request has been made! Good luck')
 
+
 def list_room_access(db):
     # Prompt for rooms
+    if db.rooms.find().count() == 0:
+        print("no rooms exist, please construct some")
+        return
     rooms_cursor = db.rooms.find()
     for i in rooms_cursor:
-        print("building code: " + i['building_name']+" room: " + i['_id'])
-    selected_room = input("Enter the room number")
+        print("building code: " + i['building_name'] + " room: " + i['room_number'] + "room code: ")
+    room_code_selection = int(input("Enter the room code for the room you want access to: "))
     # Find doors associated with room
+    doors_as = db.doors.find({'building_name': room_code_selection})
+    if doors_as.count() == 0:
+        print("That room has no doors, please create some")
+        return
     # Find Keys asociated with doors
+    door_ids = []
+    for i in doors_as:
+        i.append(i['_id'])
+    keys_as = db.keys.find({'door_id': {'$in': door_ids}})
+
+    if keys_as.count() == 0:
+        print('No keys exist for that room, no one can get in')
+        return
     # Find Issued_keys associated with keys
+    key_ids = []
+    for i in keys_as:
+        key_ids.append(i['_id'])
+    ik_as = db.issued_keys.find({'key_id': {'$in': key_ids}})
+
+    if ik_as.count() == 0:
+        print("No keys have been issued, no employees can enter the room")
+        return
+
     # Find employee requests associated with issued keys
+    ik_ids = []
+    for i in ik_as:
+        ik_ids.append(i['request_id'])
+
+    requests_cursor = db.requests.find({'_id': {'$in': ik_ids}})
+    emp_ids
