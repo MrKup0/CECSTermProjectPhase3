@@ -146,15 +146,18 @@ def delete_employee(db):
       emp = input("Enter the ID of the employee who's access you want to check")
       employee_cursor = db.employees.find({"employee_id": emp})
       # Check for requests of the employee
-      request_ids = []
+      request_ids = db.issued_keys.find({"request_id": {"$in": tmp}})
       # IF exists, find children
         # RM children
       # RM Requests
       # RM Employee
+      if
       for i in matching_requests:
           request_ids.append(i['request_id'])
       # Remove requests associated with those employee
       db.requests.delete_many({'employee_id' : {'$in': request_ids}})
+      #Remove issued keys
+      db.issued_keys.delete_many({'key_id': request_ids}
       # Remove the employee
       db.employees.delete_one({'_id': employee})
     except Exception as ex:
@@ -330,3 +333,4 @@ def list_room_access(db):
         if i['_id'] in no_dupes:
             no_dupes.append(i['_id'])
             print(i['first_name'] + " " + i['last_name'])
+
