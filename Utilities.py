@@ -14,7 +14,7 @@ class Utilities:
         #print("Prompting for the password.")
         #password = getpass.getpass(prompt='MongoDB password --> ')
         # cluster = "mongodb+srv://CECS_323:" + password + "@cluster0.a5iq9hc.mongodb.net/demo_database?retryWrites=true&w=majority"
-        cluster = "mongodb+srv://Kupo:password1234@termproject.7grkfgp.mongodb.net/?retryWrites=true&w=majority"
+        cluster = "mongodb+srv://Kupo:<pass>.7grkfgp.mongodb.net/?retryWrites=true&w=majority"
         client = MongoClient(cluster)
         # I could also have said "db = client.demo_database" to do the same thing.
         db = client.term_project
